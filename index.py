@@ -4,6 +4,8 @@ import time
 import multiprocessing
 import random
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service as ChromeService
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
@@ -25,16 +27,16 @@ desktop_user_agents = [
 ]
 
 mobile_user_agents = [
-    "Mozilla/5.0 (Linux; Android 10; Pixel 3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Mobile Safari/537.36",
-    "Mozilla/5.0 (Linux; Android 10; Pixel 3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4644.188 Mobile Safari/537.36",
-    "Mozilla/5.0 (Linux; Android 10; Pixel 3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Mobile Safari/537.36",
-    "Mozilla/5.0 (Linux; Android 10; Pixel 3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Mobile Safari/537.36",
-    "Mozilla/5.0 (Linux; Android 10; Pixel 3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Mobile Safari/537.36",
-    "Mozilla/5.0 (Linux; Android 10; Pixel 3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Mobile Safari/537.36",
-    "Mozilla/5.0 (Linux; Android 10; Pixel 3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Mobile Safari/537.36",
-    "Mozilla/5.0 (Linux; Android 10; Pixel 3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Mobile Safari/537.36",
-    "Mozilla/5.0 (Linux; Android 10; Pixel 3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Mobile Safari/537.36",
-    "Mozilla/5.0 (Linux; Android 10; Pixel 3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Mobile Safari/537.36"
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 14_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 13_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.2 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 13_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.2 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 13_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.2 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 13_5_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.2 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 13_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 13_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 13_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1 Mobile/15E148 Safari/604.1"
 ]
 
 def main(urls):
@@ -62,6 +64,18 @@ def main(urls):
 
         
 def capture_screenshot(url, screenshot_index):
+    if(check_url_in_all_used(url)):
+        print(f"{url} already used. Skipping screenshot")
+        return
+
+    if(not check_filtered_value(f"{screenshot_index:05d}.jpeg")):
+        print(f"{url} - {screenshot_index:05d}.jpeg EXISTS! skipping.")
+        return
+
+    if(not check_filtered_value_by_failed(f"{screenshot_index:05d}.jpeg")):
+        print(f"{url} - {screenshot_index:05d}.jpeg not in failed - skipping.")
+        return
+
     # Set up Chrome options
     desktop_user_agent = random.choice(desktop_user_agents)
     mobile_user_agent = random.choice(mobile_user_agents)
@@ -70,10 +84,20 @@ def capture_screenshot(url, screenshot_index):
 
     # Set up common options
     common_options = Options()
-    common_options.add_argument("--headless")  # Run Chrome in headless mode
+    # common_options.add_argument("--headless")  # Run Chrome in headless mode
+    common_options.add_argument("--start-maximized")
+    common_options.add_argument("--disable-infobars")
+    common_options.add_argument("--disable-extensions")
+    common_options.add_argument("--disable-dev-shm-usage")
+    common_options.add_argument("--no-sandbox")
+    common_options.add_argument("--disable-browser-side-navigation")
+    common_options.add_argument("--disable-gpu")
 
     # Adding argument to disable the AutomationControlled flag 
     common_options.add_argument("--disable-blink-features=AutomationControlled") 
+
+    # Set browser language
+    common_options.add_argument("--lang=en")
     
     # Exclude the collection of enable-automation switches 
     common_options.add_experimental_option("excludeSwitches", ["enable-automation"]) 
@@ -82,7 +106,7 @@ def capture_screenshot(url, screenshot_index):
     common_options.add_experimental_option("useAutomationExtension", False) 
 
     # Create web driver instance
-    driver = webdriver.Chrome(options=common_options)
+    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=common_options)
 
     # Changing the property of the navigator value for webdriver to undefined 
     driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})") 
@@ -91,7 +115,7 @@ def capture_screenshot(url, screenshot_index):
         # Navigate to the URL in both desktop and mobile drivers
         driver.get(url)
 
-        time.sleep(5)
+        time.sleep(25)
         
         # Dequeue an index from the queue
 
@@ -107,16 +131,20 @@ def capture_screenshot(url, screenshot_index):
         # Save screenshots for desktop and mobile versions
         desktop_screenshot_path = f"screenshots/Desktop/{screenshot_index:05d}.jpeg"
         mobile_screenshot_path = f"screenshots/Mobile/{screenshot_index:05d}.jpeg"
-        driver.set_window_size(1920, 1080)  # Set window size for mobile
         driver.execute_cdp_cmd('Network.setUserAgentOverride', {'userAgent': desktop_user_agent})
+        driver.set_window_size(1920, 1080)  # Set window size for mobile
 
         driver.save_screenshot(desktop_screenshot_path)
 
+        time.sleep(5)
         # Set up user agent and window size for mobile
-        driver.set_window_size(375, 812)  # Set window size for mobile
         driver.execute_cdp_cmd('Network.setUserAgentOverride', {'userAgent': mobile_user_agent})
+        driver.set_window_size(375, 1200)  # Set window size for mobile
+
 
         driver.save_screenshot(mobile_screenshot_path)
+
+        verify_all_used_json(f"{screenshot_index:05d}.jpeg", url)
         print(f"Screenshots taken successfully - {screenshot_index}")
 
         # Increment counter for naming screenshots
@@ -125,7 +153,7 @@ def capture_screenshot(url, screenshot_index):
         print(f"Timeout occurred while loading {url}. Skipping...")
         update_failed_json(f"{screenshot_index:05d}.jpeg", url)
         # Capture black screen screenshot
-        black_screen = Image.new('RGB', (360, 640), (0, 0, 0))
+        black_screen = Image.new('RGB', (375, 812), (0, 0, 0))
         black_screen.save(f"screenshots/Desktop/{screenshot_index:05d}.jpeg")
         black_screen.save(f"screenshots/Mobile/{screenshot_index:05d}.jpeg")
 
@@ -133,7 +161,7 @@ def capture_screenshot(url, screenshot_index):
         print(f"Error occurred while capturing screenshot of {url}: {e}")
         update_failed_json(f"{screenshot_index:05d}.jpeg", url)
         # Capture black screen screenshot
-        black_screen = Image.new('RGB', (360, 640), (0, 0, 0))
+        black_screen = Image.new('RGB', (375, 812), (0, 0, 0))
         black_screen.save(f"screenshots/Desktop/{screenshot_index:05d}.jpeg")
         black_screen.save(f"screenshots/Mobile/{screenshot_index:05d}.jpeg")
 
@@ -159,6 +187,61 @@ def update_failed_json(filename, url):
     with open("failed.json", "w") as json_file:
         json.dump({"failed": failed_screenshots}, json_file, indent=4)
 
+def verify_all_used_json(filename, url):
+    # Initialize all_used list
+    all_used = []
+
+    # Check if the JSON file exists
+    if os.path.exists("all_used.json"):
+        # Load existing data
+        with open("all_used.json", "r") as json_file:
+            all_used = json.load(json_file)
+
+    # Add the object to the list
+    all_used.append({"name": filename, "url": url})
+
+    # Write updated data to JSON file
+    with open("all_used.json", "w") as json_file:
+        json.dump(all_used, json_file, indent=4)
+
+def check_url_in_all_used(url):
+    if os.path.exists("all_used.json"):
+        # Load data from all_used.json
+        with open("all_used.json", "r") as all_used_file:
+            all_used_data = json.load(all_used_file)
+
+        # Extract used urls from all_used.json
+        used_urls = [item["url"] for item in all_used_data]
+
+        # Check if the provided URL is in used_urls
+        if url in used_urls:
+            return True
+        else:
+            return False
+
+def check_filtered_value(filteredValue):
+    # Read contents from "not_created.json"
+    with open("not_created.json", "r") as f:
+        not_created_data = json.load(f)
+
+    # Check if filteredValue exists in not_created array
+    if filteredValue in not_created_data.get("not_created", []):
+        return True
+    else:
+        return False
+    
+def check_filtered_value_by_failed(filteredValue):
+    # Read contents from "failed.json"
+    with open("failed.json", "r") as f:
+        failed_data = json.load(f)
+
+    # Check if filteredValue exists in "name" property of objects in "failed" array
+    for item in failed_data.get("failed", []):
+        if item.get("name") == filteredValue:
+            return True
+        
+    return False
+
 # Initialize an empty list to store the URLs
 urls = []
 
@@ -167,7 +250,8 @@ with open('urls.json', 'r') as file:
     data = json.load(file)
     urls = data['urls']
 
-main(urls)
+if __name__ == '__main__':
+    main(urls)
 
 end_time = time.time()
 
