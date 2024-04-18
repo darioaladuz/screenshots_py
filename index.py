@@ -68,13 +68,13 @@ def capture_screenshot(url, screenshot_index):
         print(f"{url} already used. Skipping screenshot")
         return
 
-    if(not check_filtered_value(f"{screenshot_index:05d}.jpeg")):
-        print(f"{url} - {screenshot_index:05d}.jpeg EXISTS! skipping.")
-        return
+    # if(not check_filtered_value(f"{screenshot_index:05d}.jpeg")):
+    #     print(f"{url} - {screenshot_index:05d}.jpeg EXISTS! skipping.")
+    #     return
 
-    if(not check_filtered_value_by_failed(f"{screenshot_index:05d}.jpeg")):
-        print(f"{url} - {screenshot_index:05d}.jpeg not in failed - skipping.")
-        return
+    # if(not check_filtered_value_by_failed(f"{screenshot_index:05d}.jpeg")):
+    #     print(f"{url} - {screenshot_index:05d}.jpeg not in failed - skipping.")
+    #     return
 
     # Set up Chrome options
     desktop_user_agent = random.choice(desktop_user_agents)
